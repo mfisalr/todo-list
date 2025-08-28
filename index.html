@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List dengan Alarm Pengingat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .alert-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .priority-high { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+        .priority-medium { background-color: #fef3c7; border-left: 4px solid #f59e0b; }
+        .priority-low { background-color: #d1fae5; border-left: 4px solid #10b981; }
+        
+        /* Custom scrollbar untuk task list */
+        .task-list-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .task-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .task-list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .task-list-container::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
+        }
+        .task-list-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-2">
+                <i class="fas fa-tasks mr-3"></i>To-Do List Plus
+            </h1>
+            <p class="text-gray-600">Kelola tugas Anda dengan alarm pengingat yang cerdas</p>
+            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 rounded-lg mt-4 max-w-md mx-auto">
+                <div class="flex items-center justify-center">
+                    <i class="fas fa-bell text-yellow-300 text-xl mr-3"></i>
+                    <div>
+                        <h3 class="font-semibold">Waktu Sekarang</h3>
+                        <p class="text-sm opacity-90" id="current-time">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Form -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-plus-circle mr-2 text-indigo-600"></i>Tambah Tugas Baru
+            </h2>
+            <form id="task-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-pencil-alt mr-1 text-gray-500"></i>Judul Tugas *
+                    </label>
+                    <input type="text" id="task-title" placeholder="Apa yang perlu dilakukan?" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="far fa-calendar mr-1 text-gray-500"></i>Tanggal *
+                        </label>
+                        <input type="date" id="task-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="far fa-clock mr-1 text-gray-500"></i>Waktu *
+                        </label>
+                        <input type="time" id="task-time" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Prioritas</label>
+                    <div class="flex space-x-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="high" class="mr-2">
+                            <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">Tinggi</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="medium" checked class="mr-2">
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">Sedang</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="priority" value="low" class="mr-2">
+                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Rendah</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-1 text-gray-500"></i>Catatan (opsional)
+                    </label>
+                    <textarea id="task-notes" placeholder="Tambahkan catatan..." 
+                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"></textarea>
+                </div>
+                
+                <div class="bg-blue-50 p-3 rounded-lg">
+                    <p class="text-sm text-blue-700 flex items-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Alarm akan aktif saat waktu tugas tiba. Pastikan izin notifikasi diizinkan.
+                    </p>
+                </div>
+                
+                <button type="submit" class="w-full bg-indigo-600 text-white py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold flex items-center justify-center">
+                    <i class="fas fa-plus mr-2"></i>Tambah Tugas
+                </button>
+            </form>
+        </div>
+
+
+
+        <!-- Tasks List -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                    <i class="fas fa-list-check mr-2 text-indigo-600"></i>Daftar Tugas
+                </h2>
+                <div class="flex space-x-2">
+                    <button id="filter-all" class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium">Semua</button>
+                    <button id="filter-active" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Aktif</button>
+                    <button id="filter-completed" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Selesai</button>
+                </div>
+            </div>
+            
+            <div id="tasks-container" class="task-list-container space-y-3">
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-clipboard-list text-4xl mb-4 text-indigo-300"></i>
+                    <p>Belum ada tugas. Tambahkan tugas pertama Anda!</p>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-2xl font-bold text-indigo-600" id="total-tasks">0</div>
+                        <div class="text-sm text-gray-600">Total</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-blue-600" id="active-tasks">0</div>
+                        <div class="text-sm text-gray-600">Aktif</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-green-600" id="completed-tasks">0</div>
+                        <div class="text-sm text-gray-600">Selesai</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alarm Notification -->
+        <div id="alarm-notification" class="fixed top-4 right-4 bg-yellow-500 text-white p-4 rounded-lg shadow-xl transform translate-x-full transition-transform duration-300 z-50 max-w-sm">
+            <div class="flex items-start">
+                <i class="fas fa-bell text-2xl mr-3"></i>
+                <div>
+                    <h3 class="font-semibold">⏰ Pengingat Tugas!</h3>
+                    <p id="alarm-message" class="mt-1"></p>
+                    <div class="flex space-x-2 mt-3">
+                        <button id="dismiss-alarm" class="bg-white text-yellow-600 px-3 py-1 rounded text-sm font-medium">Tutup</button>
+                        <button id="snooze-alarm" class="bg-yellow-600 text-white px-3 py-1 rounded text-sm font-medium">Tunda 5 menit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Info (bisa di-hidden) -->
+        <div class="mt-4 text-center text-xs text-gray-500">
+            <p>Buka Console (F12) untuk melihat log alarm</p>
+        </div>
+    </div>
+
+    <script>
+        class TodoApp {
+            constructor() {
+                this.tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                this.currentFilter = 'all';
+                this.alarmInterval = null;
+                this.currentAlarmId = null;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.loadTasks();
+                this.startAlarmCheck();
+                this.updateCurrentTime();
+                this.updateStats();
+                this.requestNotificationPermission();
+                
+                // Set ulang alarm untuk semua tugas yang belum selesai
+                this.resetAllTaskAlarms();
+                
+                console.log('Aplikasi To-Do List diinisialisasi');
+                console.log('Total tugas:', this.tasks.length);
+            }
+
+            initializeElements() {
+                this.taskForm = document.getElementById('task-form');
+                this.tasksContainer = document.getElementById('tasks-container');
+                this.alarmNotification = document.getElementById('alarm-notification');
+                this.alarmMessage = document.getElementById('alarm-message');
+                this.currentTimeElement = document.getElementById('current-time');
+                this.totalTasksElement = document.getElementById('total-tasks');
+                this.activeTasksElement = document.getElementById('active-tasks');
+                this.completedTasksElement = document.getElementById('completed-tasks');
+            }
+
+            bindEvents() {
+                this.taskForm.addEventListener('submit', (e) => this.addTask(e));
+                
+                document.getElementById('filter-all').addEventListener('click', () => this.setFilter('all'));
+                document.getElementById('filter-active').addEventListener('click', () => this.setFilter('active'));
+                document.getElementById('filter-completed').addEventListener('click', () => this.setFilter('completed'));
+                
+                document.getElementById('dismiss-alarm').addEventListener('click', () => {
+                    this.hideAlarm();
+                });
+                
+                document.getElementById('snooze-alarm').addEventListener('click', () => {
+                    this.snoozeAlarm();
+                });
+            }
+
+            addTask(e) {
+                e.preventDefault();
+                
+                const title = document.getElementById('task-title').value.trim();
+                const date = document.getElementById('task-date').value;
+                const time = document.getElementById('task-time').value;
+                const priority = document.querySelector('input[name="priority"]:checked').value;
+                const notes = document.getElementById('task-notes').value;
+                
+                if (!title) {
+                    this.showNotification('Judul tugas harus diisi!', 'error');
+                    return;
+                }
+                
+                if (!date || !time) {
+                    this.showNotification('Tanggal dan waktu harus diisi untuk alarm!', 'error');
+                    return;
+                }
+                
+                const task = {
+                    id: Date.now(),
+                    title,
+                    date,
+                    time,
+                    priority,
+                    notes,
+                    completed: false,
+                    createdAt: new Date().toISOString(),
+                    alarmTriggered: false
+                };
+                
+                this.tasks.push(task);
+                this.saveTasks();
+                this.loadTasks();
+                this.updateStats();
+                this.taskForm.reset();
+                
+                // Set default values
+                const now = new Date();
+                now.setHours(now.getHours() + 1);
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                document.getElementById('task-time').value = `${hours}:${minutes}`;
+                document.querySelector('input[name="priority"][value="medium"]').checked = true;
+                
+                // Set alarm untuk tugas ini menggunakan setTimeout (sama seperti test alarm)
+                this.setTaskAlarm(task);
+                
+                this.showNotification('Tugas berhasil ditambahkan! Alarm akan aktif.', 'success');
+                console.log('Tugas ditambahkan:', task);
+            }
+
+            deleteTask(id) {
+                if (confirm('Apakah Anda yakin ingin menghapus tugas ini?')) {
+                    this.tasks = this.tasks.filter(task => task.id !== id);
+                    this.saveTasks();
+                    this.loadTasks();
+                    this.updateStats();
+                    this.showNotification('Tugas berhasil dihapus', 'info');
+                    console.log('Tugas dihapus dengan ID:', id);
+                }
+            }
+
+            toggleComplete(id) {
+                this.tasks = this.tasks.map(task => {
+                    if (task.id === id) {
+                        return { ...task, completed: !task.completed };
+                    }
+                    return task;
+                });
+                this.saveTasks();
+                this.loadTasks();
+                this.updateStats();
+                console.log('Status tugas diubah untuk ID:', id);
+            }
+
+            setFilter(filter) {
+                this.currentFilter = filter;
+                
+                // Update button states
+                document.getElementById('filter-all').classList.toggle('bg-indigo-100', filter === 'all');
+                document.getElementById('filter-all').classList.toggle('text-indigo-700', filter === 'all');
+                document.getElementById('filter-active').classList.toggle('bg-indigo-100', filter === 'active');
+                document.getElementById('filter-active').classList.toggle('text-indigo-700', filter === 'active');
+                document.getElementById('filter-completed').classList.toggle('bg-indigo-100', filter === 'completed');
+                document.getElementById('filter-completed').classList.toggle('text-indigo-700', filter === 'completed');
+                
+                this.loadTasks();
+                console.log('Filter diubah ke:', filter);
+            }
+
+            loadTasks() {
+                let filteredTasks = this.tasks;
+                
+                if (this.currentFilter === 'active') {
+                    filteredTasks = this.tasks.filter(task => !task.completed);
+                } else if (this.currentFilter === 'completed') {
+                    filteredTasks = this.tasks.filter(task => task.completed);
+                }
+                
+                if (filteredTasks.length === 0) {
+                    this.tasksContainer.innerHTML = `
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-clipboard-list text-4xl mb-4 text-indigo-300"></i>
+                            <p>Tidak ada tugas yang ditemukan.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                this.tasksContainer.innerHTML = filteredTasks.map(task => {
+                    const taskDate = new Date(`${task.date}T${task.time}`);
+                    const now = new Date();
+                    const isOverdue = !task.completed && taskDate < now;
+                    
+                    return `
+                        <div class="border border-gray-200 rounded-lg p-4 ${task.completed ? 'bg-gray-50' : ''} ${isOverdue ? 'border-red-300 bg-red-50' : ''} priority-${task.priority}">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-start space-x-3 flex-1">
+                                    <button onclick="todoApp.toggleComplete(${task.id})" class="mt-1 ${task.completed ? 'text-green-600' : 'text-gray-400'}">
+                                        <i class="fas ${task.completed ? 'fa-check-circle' : 'fa-circle'} text-lg"></i>
+                                    </button>
+                                    <div class="flex-1 ${task.completed ? 'completed' : ''}">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="font-semibold ${isOverdue ? 'text-red-600' : ''}">
+                                                ${task.title}
+                                            </h3>
+                                            <span class="px-2 py-1 rounded-full text-xs ${task.priority === 'high' ? 'bg-red-100 text-red-800' : task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                                ${task.priority === 'high' ? 'Tinggi' : task.priority === 'medium' ? 'Sedang' : 'Rendah'}
+                                            </span>
+                                        </div>
+                                        ${task.notes ? `<p class="text-sm text-gray-600 mt-1">${task.notes}</p>` : ''}
+                                        <div class="flex items-center space-x-4 mt-2 text-sm ${isOverdue ? 'text-red-500' : 'text-gray-500'}">
+                                            <span><i class="far fa-calendar mr-1"></i>${task.date}</span>
+                                            <span><i class="far fa-clock mr-1"></i>${task.time}</span>
+                                            ${isOverdue ? '<span class="text-red-500"><i class="fas fa-exclamation-triangle mr-1"></i>Terlambat!</span>' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onclick="todoApp.deleteTask(${task.id})" class="text-red-500 hover:text-red-700 ml-4 mt-1">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateStats() {
+                const total = this.tasks.length;
+                const active = this.tasks.filter(task => !task.completed).length;
+                const completed = this.tasks.filter(task => task.completed).length;
+                
+                this.totalTasksElement.textContent = total;
+                this.activeTasksElement.textContent = active;
+                this.completedTasksElement.textContent = completed;
+            }
+
+            saveTasks() {
+                localStorage.setItem('tasks', JSON.stringify(this.tasks));
+            }
+
+            setTaskAlarm(task) {
+                // Parsing waktu tugas (format HH:MM)
+                const [taskHour, taskMinute] = task.time.split(':').map(Number);
+                const now = new Date();
+                const taskDate = new Date(task.date);
+                const alarmTime = new Date(taskDate);
+                alarmTime.setHours(taskHour, taskMinute, 0, 0);
+                
+                // Jika waktu alarm sudah lewat hari ini, set alarm ke besok
+                if (alarmTime <= now) {
+                    alarmTime.setDate(alarmTime.getDate() + 1);
+                }
+                
+                const timeToAlarm = alarmTime - now;
+                console.log(`⏰ Alarm diset untuk "${task.title}" pada ${task.time}. Akan berbunyi dalam ${Math.floor(timeToAlarm / 60000)} menit.`);
+                
+                // Set timeout untuk alarm (sama seperti test alarm)
+                setTimeout(() => {
+                    if (!task.completed && !task.alarmTriggered) {
+                        console.log(`🚨 Waktu alarm untuk: "${task.title}"`);
+                        this.triggerAlarm(task);
+                        task.alarmTriggered = true;
+                        this.saveTasks();
+                    }
+                }, timeToAlarm);
+            }
+
+            resetAllTaskAlarms() {
+                // Reset alarm untuk semua tugas yang belum selesai
+                this.tasks.forEach(task => {
+                    if (!task.completed && !task.alarmTriggered) {
+                        this.setTaskAlarm(task);
+                    }
+                });
+            }
+
+            startAlarmCheck() {
+                // Check every second for better responsiveness (same as test alarm)
+                this.alarmInterval = setInterval(() => {
+                    this.checkAlarms();
+                    this.updateCurrentTime();
+                }, 1000);
+                
+                // Initial check
+                this.checkAlarms();
+                this.updateCurrentTime();
+                
+                console.log('Alarm checker started (checking every second)');
+            }
+
+            checkAlarms() {
+                const now = new Date();
+                const currentDate = now.toISOString().split('T')[0];
+                const currentTime = now.toTimeString().substring(0, 5);
+
+                this.tasks.forEach(task => {
+                    if (task.completed || task.alarmTriggered) return;
+
+                    // Debug log untuk melihat perbandingan waktu
+                    console.log(`Checking task: ${task.title} - Date: ${task.date} vs ${currentDate}, Time: ${task.time} vs ${currentTime}`);
+
+                    if (task.date === currentDate && task.time === currentTime) {
+                        console.log(`🚨 Trigger alarm untuk: "${task.title}" pada ${task.time}`);
+                        this.triggerAlarm(task);
+                        task.alarmTriggered = true;
+                        this.saveTasks();
+                    }
+                });
+            }
+
+            triggerAlarm(task) {
+                this.currentAlarmId = task.id;
+                this.alarmMessage.textContent = `Waktunya untuk: ${task.title}`;
+                this.alarmNotification.classList.remove('translate-x-full');
+                this.alarmNotification.classList.add('alert-animation');
+                
+                this.playAlarmSound();
+                
+                // Browser notification
+                if ('Notification' in window) {
+                    if (Notification.permission === 'granted') {
+                        new Notification('⏰ Pengingat Tugas', {
+                            body: `Waktunya untuk: ${task.title}`,
+                            icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>'
+                        });
+                        console.log('Notifikasi browser ditampilkan');
+                    } else if (Notification.permission !== 'denied') {
+                        Notification.requestPermission();
+                    }
+                }
+            }
+
+            playAlarmSound() {
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    const gainNode = audioCtx.createGain();
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    oscillator.start();
+                    oscillator.stop(audioCtx.currentTime + 0.5);
+                    console.log('Suara alarm dimainkan');
+                } catch (e) {
+                    console.log('Audio tidak didukung di browser ini');
+                }
+            }
+
+            hideAlarm() {
+                this.alarmNotification.classList.add('translate-x-full');
+                this.alarmNotification.classList.remove('alert-animation');
+                this.currentAlarmId = null;
+                console.log('Alarm ditutup');
+            }
+
+            snoozeAlarm() {
+                if (this.currentAlarmId) {
+                    const task = this.tasks.find(t => t.id === this.currentAlarmId);
+                    if (task) {
+                        const [hours, minutes] = task.time.split(':').map(Number);
+                        const newDate = new Date();
+                        newDate.setHours(hours);
+                        newDate.setMinutes(minutes + 5);
+                        newDate.setSeconds(0);
+                        newDate.setMilliseconds(0);
+
+                        const newHours = newDate.getHours().toString().padStart(2, '0');
+                        const newMinutes = newDate.getMinutes().toString().padStart(2, '0');
+
+                        task.time = `${newHours}:${newMinutes}`;
+                        task.alarmTriggered = false;
+                        this.saveTasks();
+
+                        this.showNotification(`Alarm ditunda sampai ${newHours}:${newMinutes}`, 'info');
+                        console.log(`Alarm ditunda sampai ${newHours}:${newMinutes}`);
+                    }
+                    this.hideAlarm();
+                }
+            }
+
+            updateCurrentTime() {
+                const now = new Date();
+                this.currentTimeElement.textContent = now.toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                    type === 'success' ? 'bg-green-500' : 
+                    type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                } text-white font-semibold`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.5s';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 500);
+                }, 3000);
+            }
+
+            requestNotificationPermission() {
+                if ('Notification' in window) {
+                    if (Notification.permission === 'default') {
+                        Notification.requestPermission().then(permission => {
+                            console.log('Izin notifikasi:', permission);
+                            if (permission === 'granted') {
+                                this.showNotification('Notifikasi diaktifkan! Alarm akan muncul saat waktunya.', 'success');
+                            }
+                        });
+                    } else {
+                        console.log('Status izin notifikasi:', Notification.permission);
+                    }
+                }
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        let todoApp;
+        document.addEventListener('DOMContentLoaded', () => {
+            todoApp = new TodoApp();
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('task-date').value = today;
+
+            // Set default time to current time + 1 hour
+            const now = new Date();
+            now.setHours(now.getHours() + 1);
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('task-time').value = `${hours}:${minutes}`;
+            
+            console.log('Aplikasi To-Do List siap digunakan!');
+            console.log('Pastikan izin notifikasi diaktifkan untuk mendapatkan alarm');
+        });
+
+
+    </script>
+</body>
+</html>
